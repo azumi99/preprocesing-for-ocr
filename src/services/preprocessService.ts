@@ -264,8 +264,6 @@ async function runOpenCvPreprocessing(
   const y = detection ? clamp(Math.floor(detection.y - paddingY), 0, imageInfo.height - 1) : 0;
   const right = detection ? clamp(Math.ceil(detection.x + detection.width + paddingX), x + 1, imageInfo.width) : imageInfo.width;
   const bottom = detection ? clamp(Math.ceil(detection.y + detection.height + paddingY), y + 1, imageInfo.height) : imageInfo.height;
-  const textCoverage = await estimateTextCoverage(buffer).catch(() => 0);
-  const sharpenAmount = textCoverage > 0.01 ? '1.0' : '0.7';
 
   try {
     await writeFile(inputPath, buffer);
@@ -281,26 +279,15 @@ async function runOpenCvPreprocessing(
       '1800x1800>',
       '-colorspace',
       'Gray',
-      '(',
-      '+clone',
-      '-blur',
-      '0x18',
-      ')',
-      '-compose',
-      'DivideSrc',
-      '-composite',
-      '-statistic',
-      'Median',
-      '1',
+      '-normalize',
       '-contrast-stretch',
       '0.1%x0.1%',
-      '-auto-level',
-      '-gamma',
-      '1.2',
-      '-sigmoidal-contrast',
-      '3x50%',
       '-unsharp',
-      `0x1+${sharpenAmount}+0.01`,
+      '0x1+0.6+0.005',
+      '-bordercolor',
+      'white',
+      '-border',
+      '24x24',
       outputPath
     ];
 
