@@ -1,0 +1,27 @@
+{
+  "name": "ocr-preprocessing",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch app.ts",
+    "start": "tsx app.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@scalar/express-api-reference": "^0.10.11",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "onnxruntime-node": "^1.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
