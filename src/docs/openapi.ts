@@ -1,4 +1,5 @@
 export function createOpenApiDocument(port: number) {
+  const publicBaseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${port}`;
   return {
     openapi: '3.1.0',
     info: {
@@ -6,7 +7,7 @@ export function createOpenApiDocument(port: number) {
       version: '1.0.0',
       description: 'API untuk preprocessing gambar dokumen sebelum OCR memakai YOLO untuk deteksi dokumen dan OpenCV untuk crop, deskew, denoise, contrast, dan binarization.'
     },
-    servers: [{ url: `http://localhost:${port}` }],
+    servers: [{ url: publicBaseUrl }],
     paths: {
       '/health': {
         get: {

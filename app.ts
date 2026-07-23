@@ -26,7 +26,10 @@ app.get('/openapi.json', (_req: Request, res: Response) => {
   res.json(openApiDocument);
 });
 
-app.use('/docs', apiReference({ spec: { content: openApiDocument } }));
+app.use('/docs', apiReference({
+  cdn: 'https://cdn.jsdelivr.net/npm/@scalar/api-reference/dist/browser/standalone.js',
+  spec: { content: openApiDocument }
+}));
 app.use(healthRouter);
 app.use(preprocessRouter);
 

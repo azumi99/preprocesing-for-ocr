@@ -72,7 +72,8 @@ export async function preprocessDocument(buffer: Buffer): Promise<PreprocessResu
   const sourceInfo = await getImageInfo(buffer);
   const detections = await detectDocuments(buffer, sourceInfo.width, sourceInfo.height);
   const detectionStatus = detections.length > 0 ? 'detected' : 'not_detected';
-  const targets = detections.length > 0 ? sortDetections(detections) : [null];
+  const textFocus = detections.length > 0 ? null : await detectTextFocus(buffer, sourceInfo).catch(() => null);
+  const targets = detections.length > 0 ? sortDetections(detections) : [textFocus];
   const processed: Buffer[] = [];
   const orientationAngles: number[] = [];
 
@@ -89,7 +90,7 @@ export async function preprocessDocument(buffer: Buffer): Promise<PreprocessResu
 
   return {
     output,
-    cropped: detectionStatus === 'detected',
+    cropped: detectionStatus === 'detected' || textFocus !== null,
     deskewAngle: 0,
     orientationAngle: orientationAngles[0] ?? 0,
     orientationMethod: 'pp-lcnet-doc-ori',
@@ -329,6 +330,60 @@ async function estimateTextCoverage(buffer: Buffer): Promise<number> {
   }
 
   return values.length > 0 ? active / values.length : 0;
+}
+
+async function detectTextFocus(buffer: Buffer, imageInfo: { width: number; height: number }): Promise<Detection | null> {
+  const session = await getTextDetectorSession();
+  const inputName = session.inputNames[0];
+  const outputName = session.outputNames[0];
+  if (!inputName || !outputName) return null;
+
+  const tensor = await imageToTextDetectorTensor(buffer);
+  const results = await session.run({ [inputName]: tensor });
+  const output = results[outputName];
+  if (!output) return null;
+
+  return textMapToDetection(output, imageInfo);
+}
+
+function textMapToDetection(output: ort.Tensor, imageInfo: { width: number; height: number }): Detection | null {
+  const values = output.data as Float32Array;
+  const dims = output.dims;
+  const mapWidth = dims[dims.length - 1] ?? 0;
+  const mapHeight = dims[dims.length - 2] ?? 0;
+  if (!mapWidth || !mapHeight || values.length === 0) return null;
+
+  let minX = mapWidth;
+  let minY = mapHeight;
+  let maxX = -1;
+  let maxY = -1;
+  let active = 0;
+
+  for (let y = 0; y < mapHeight; y += 1) {
+    for (let x = 0; x < mapWidth; x += 1) {
+      const value = values[y * mapWidth + x] ?? 0;
+      if (value <= 0.3) continue;
+
+      active += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  if (active < 16 || maxX < minX || maxY < minY) return null;
+
+  const scaleX = imageInfo.width / mapWidth;
+  const scaleY = imageInfo.height / mapHeight;
+  const x = minX * scaleX;
+  const y = minY * scaleY;
+  const width = (maxX - minX + 1) * scaleX;
+  const height = (maxY - minY + 1) * scaleY;
+
+  if (width < imageInfo.width * 0.05 || height < imageInfo.height * 0.03) return null;
+
+  return { x, y, width, height, score: active / values.length };
 }
 
 async function imageToTextDetectorTensor(buffer: Buffer): Promise<ort.Tensor> {
