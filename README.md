@@ -28,7 +28,66 @@ Pipeline utama:
 
 ## Model yang dipakai
 
-Letakkan model di folder `models/`:
+Letakkan model di folder `models/`. Karena repo ini menyimpan model dalam format ONNX, download model Paddle resmi lalu convert ke ONNX, atau gunakan link berikut.
+
+### Document Detection (YOLO)
+
+```bash
+curl -L "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n.onnx" -o models/document-yolo.onnx
+```
+
+Untuk akurasi crop dokumen lebih baik, ganti dengan YOLO document detector ONNX bila tersedia.
+
+### Document Orientation (PP-LCNet_x1_0_doc_ori)
+
+Download model Paddle resmi:
+
+```bash
+curl -L "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-LCNet_x1_0_doc_ori_infer.tar" -o PP-LCNet_x1_0_doc_ori_infer.tar
+tar -xf PP-LCNet_x1_0_doc_ori_infer.tar
+```
+
+Convert ke ONNX:
+
+```bash
+pip install paddle2onnx packaging paddlepaddle
+paddle2onnx \
+  --model_dir PP-LCNet_x1_0_doc_ori_infer \
+  --model_filename inference.json \
+  --params_filename inference.pdiparams \
+  --save_file models/pp-lcnet-doc-ori.onnx \
+  --opset_version 11 \
+  --optimize_tool None \
+  --enable_onnx_checker False
+```
+
+Dokumentasi: <https://www.paddleocr.ai/main/en/version3.x/module_usage/doc_img_orientation_classification.html>
+
+### Text Detection (PP-OCRv5_mobile_det)
+
+Download model Paddle resmi:
+
+```bash
+curl -L "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_det_infer.tar" -o PP-OCRv5_mobile_det_infer.tar
+tar -xf PP-OCRv5_mobile_det_infer.tar
+```
+
+Convert ke ONNX:
+
+```bash
+paddle2onnx \
+  --model_dir PP-OCRv5_mobile_det_infer \
+  --model_filename inference.json \
+  --params_filename inference.pdiparams \
+  --save_file models/pp-ocrv5-mobile-det.onnx \
+  --opset_version 11 \
+  --optimize_tool None \
+  --enable_onnx_checker False
+```
+
+Dokumentasi: <https://www.paddleocr.ai/main/en/version3.x/module_usage/text_detection.html>
+
+### Ringkasan model yang dipakai
 
 - `models/document-yolo.onnx`
 - `models/pp-lcnet-doc-ori.onnx`
