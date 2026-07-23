@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import multer, { FileFilterCallback } from 'multer';
+import { maxConcurrentPreprocess, maxUploadBytes } from '../config/constants.js';
 import { preprocessDocument } from '../services/preprocessService.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: maxUploadBytes, files: 1 },
   fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -16,6 +17,7 @@ const upload = multer({
 });
 
 export const preprocessRouter = Router();
+let activePreprocessRequests = 0;
 
 preprocessRouter.post('/preprocess', upload.single('image'), async (req: Request, res: Response) => {
   if (!req.file) {
@@ -23,6 +25,13 @@ preprocessRouter.post('/preprocess', upload.single('image'), async (req: Request
     return;
   }
 
+  if (activePreprocessRequests >= maxConcurrentPreprocess) {
+    res.setHeader('Retry-After', '5');
+    res.status(503).json({ error: 'Server is busy, retry later' });
+    return;
+  }
+
+  activePreprocessRequests += 1;
   try {
     const result = await preprocessDocument(req.file.buffer);
     res.setHeader('Content-Type', 'image/png');
@@ -38,5 +47,7 @@ preprocessRouter.post('/preprocess', upload.single('image'), async (req: Request
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ error: 'Preprocessing failed', message });
+  } finally {
+    activePreprocessRequests -= 1;
   }
 });

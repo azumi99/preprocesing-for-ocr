@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -31,6 +31,38 @@ const confidenceThreshold = Number(process.env.YOLO_CONFIDENCE || 0.35);
 let yoloSession: Promise<ort.InferenceSession> | null = null;
 let orientationSession: Promise<ort.InferenceSession> | null = null;
 let textDetectorSession: Promise<ort.InferenceSession> | null = null;
+
+export async function checkPreprocessDependencies(): Promise<{ ok: boolean; checks: Record<string, string> }> {
+  const checks: Record<string, string> = {};
+
+  await Promise.all([
+    access(modelPath).then(() => {
+      checks.yoloModel = 'ok';
+    }).catch((error: unknown) => {
+      checks.yoloModel = error instanceof Error ? error.message : 'missing';
+    }),
+    access(orientationModelPath).then(() => {
+      checks.orientationModel = 'ok';
+    }).catch((error: unknown) => {
+      checks.orientationModel = error instanceof Error ? error.message : 'missing';
+    }),
+    access(textDetectorModelPath).then(() => {
+      checks.textDetectorModel = 'ok';
+    }).catch((error: unknown) => {
+      checks.textDetectorModel = error instanceof Error ? error.message : 'missing';
+    }),
+    execFileAsync('magick', ['-version']).then(() => {
+      checks.imageMagick = 'ok';
+    }).catch((error: unknown) => {
+      checks.imageMagick = error instanceof Error ? error.message : 'missing';
+    })
+  ]);
+
+  return {
+    ok: Object.values(checks).every((value) => value === 'ok'),
+    checks
+  };
+}
 
 export async function preprocessDocument(buffer: Buffer): Promise<PreprocessResult> {
   if (!modelPath) {

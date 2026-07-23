@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch app.ts",
-    "start": "tsx app.ts",
+    "start": "node dist/app.js",
+    "start:dev": "tsx app.ts",
     "build": "tsc",
+    "prestart": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },
