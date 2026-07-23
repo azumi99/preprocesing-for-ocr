@@ -258,8 +258,8 @@ async function runOpenCvPreprocessing(
   const workdir = await mkdtemp(join(tmpdir(), 'ocr-opencv-'));
   const inputPath = join(workdir, `${randomUUID()}.img`);
   const outputPath = join(workdir, 'ocr.png');
-  const paddingX = detection ? detection.width * 0.025 : 0;
-  const paddingY = detection ? detection.height * 0.025 : 0;
+  const paddingX = detection ? Math.max(detection.width * 0.08, imageInfo.width * 0.015) : 0;
+  const paddingY = detection ? Math.max(detection.height * 0.1, imageInfo.height * 0.015) : 0;
   const x = detection ? clamp(Math.floor(detection.x - paddingX), 0, imageInfo.width - 1) : 0;
   const y = detection ? clamp(Math.floor(detection.y - paddingY), 0, imageInfo.height - 1) : 0;
   const right = detection ? clamp(Math.ceil(detection.x + detection.width + paddingX), x + 1, imageInfo.width) : imageInfo.width;
@@ -370,7 +370,14 @@ function textMapToDetection(output: ort.Tensor, imageInfo: { width: number; heig
 
   if (width < imageInfo.width * 0.05 || height < imageInfo.height * 0.03) return null;
 
-  return { x, y, width, height, score: active / values.length };
+  const padX = Math.max(width * 0.12, imageInfo.width * 0.025);
+  const padY = Math.max(height * 0.16, imageInfo.height * 0.025);
+  const left = clamp(x - padX, 0, imageInfo.width - 1);
+  const top = clamp(y - padY, 0, imageInfo.height - 1);
+  const right = clamp(x + width + padX, left + 1, imageInfo.width);
+  const bottom = clamp(y + height + padY, top + 1, imageInfo.height);
+
+  return { x: left, y: top, width: right - left, height: bottom - top, score: active / values.length };
 }
 
 async function imageToTextDetectorTensor(buffer: Buffer): Promise<ort.Tensor> {
