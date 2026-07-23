@@ -1,0 +1,27 @@
+services:
+  preprocessing-api:
+    build:
+      context: .
+    image: local/ocr-preprocessing:latest
+    container_name: ocr-preprocessing-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      CUDA_VISIBLE_DEVICES: "1"
+      PUBLIC_BASE_URL: https://model-ocr.visions.biz.id/preprocessing
+    ports:
+      - "127.0.0.1:3000:3000"
+    tmpfs:
+      - /tmp:size=1g,mode=1777
+    mem_limit: 4g
+    cpus: "4.0"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3

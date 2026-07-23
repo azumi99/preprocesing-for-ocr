@@ -1,10 +1,38 @@
+FROM node:22-bookworm-slim AS imagemagick
+
+ARG IMAGEMAGICK_VERSION=7.1.0-23
+WORKDIR /tmp/imagemagick-build
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates curl build-essential pkg-config autoconf automake libtool \
+    libltdl-dev libjpeg62-turbo-dev libpng-dev libtiff-dev libwebp-dev libheif-dev libopenjp2-7-dev libxml2-dev zlib1g-dev \
+  && curl -fsSL "https://github.com/ImageMagick/ImageMagick/archive/refs/tags/${IMAGEMAGICK_VERSION}.tar.gz" -o imagemagick.tar.gz \
+  && tar -xzf imagemagick.tar.gz --strip-components=1 \
+  && ./configure \
+    --prefix=/usr/local \
+    --with-quantum-depth=16 \
+    --enable-hdri \
+    --disable-static \
+    --with-modules \
+    --without-perl \
+  && make -j"$(nproc)" \
+  && make install \
+  && ldconfig /usr/local/lib \
+  && magick -version \
+  && rm -rf /tmp/imagemagick-build /var/lib/apt/lists/*
+
 FROM node:22-bookworm-slim AS base
 
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends imagemagick ca-certificates \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates libltdl7 libjpeg62-turbo libpng16-16 libtiff6 libwebp7 libheif1 libopenjp2-7 libxml2 zlib1g libgomp1 \
   && rm -rf /var/lib/apt/lists/*
+
+COPY --from=imagemagick /usr/local /usr/local
+RUN ldconfig /usr/local/lib && magick -version
 
 FROM base AS deps
 
