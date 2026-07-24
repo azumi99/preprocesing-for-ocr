@@ -277,17 +277,14 @@ async function runOpenCvPreprocessing(
       '40%',
       '-resize',
       '1800x1800>',
-      '-colorspace',
-      'Gray',
-      '-normalize',
       '-contrast-stretch',
-      '0.1%x0.1%',
+      '0.25%x0.1%',
+      '-sigmoidal-contrast',
+      '4.5x45%',
       '-unsharp',
-      '0x1+0.6+0.005',
-      '-bordercolor',
-      'white',
-      '-border',
-      '24x24',
+      '0x1.25+1.6+0.008',
+      '-sharpen',
+      '0x0.65',
       outputPath
     ];
 
